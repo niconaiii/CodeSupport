@@ -4,7 +4,7 @@ import { Input, InputNumber, Select, Switch, Button } from "antd";
 import { useServiceCategories } from "../hooks/useServiceCategories";
 import type { IService } from "../types/service";
 
-// 1. Định nghĩa chuẩn xác các trường có trong Form Dịch vụ (Không có created_at)
+// ==================== THÊM MỚI: Định nghĩa kiểu dữ liệu an toàn cho Form dịch vụ ====================
 export interface ServiceFormValues {
     name: string;
     category_id: number | undefined;
@@ -15,6 +15,7 @@ export interface ServiceFormValues {
     deposit_percent: number;
     status: string;
 }
+// ====================================================================================================
 
 interface ServiceFormProps {
     initialValues?: IService | null;
@@ -25,7 +26,7 @@ interface ServiceFormProps {
 export default function ServiceForm({ initialValues, onSubmit, submitting }: ServiceFormProps) {
     const { data: categories = [], isLoading: isLoadingCategories } = useServiceCategories();
 
-    // 2. Ép kiểu Form bằng ServiceFormValues
+    // CẬP NHẬT: Ép kiểu dữ liệu strict cho useForm bằng <ServiceFormValues> giúp ngăn lỗi gán sai kiểu category_id
     const { control, handleSubmit, reset, watch } = useForm<ServiceFormValues>({
         defaultValues: {
             name: "",
@@ -39,7 +40,9 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
         },
     });
 
-    // 3. Xử lý đồng bộ dữ liệu cũ (Sửa) hoặc làm sạch Form (Thêm mới)
+    // CẬP NHẬT: Thay đổi cơ chế đồng bộ dữ liệu, map thủ công tường minh từng trường 
+    // XÓA BỎ: Loại bỏ hoàn toàn cơ chế giải rải rộng (...initialValues) cũ để loại bỏ ID thừa kế, tránh lỗi TypeScript gạch đỏ
+    // XÓA BỎ: Loại bỏ hoàn toàn trường created_at và DatePicker vì interface IService gốc không quản lý trường này
     useEffect(() => {
         if (initialValues) {
             reset({
@@ -167,7 +170,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 <span className="text-sm font-medium text-gray-700">Yêu cầu khách hàng thanh toán đặt cọc trước trực tuyến</span>
             </div>
 
-            {/* Khung phần trăm cọc (Chỉ hiện khi Switch bật) */}
+            {/* Khung nhập phần trăm cọc */}
             {isDepositRequired && (
                 <div className="transition-all duration-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phần trăm tiền cọc cần trả trước (%)</label>
@@ -181,7 +184,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 </div>
             )}
 
-            {/* Mô tả */}
+            {/* Mô tả ngắn */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn về dịch vụ</label>
                 <Controller
