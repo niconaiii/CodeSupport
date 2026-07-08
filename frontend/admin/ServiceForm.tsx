@@ -1,24 +1,32 @@
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-// CẬP NHẬT: Import thêm DatePicker từ Ant Design
-import { Input, InputNumber, Select, Switch, Button, DatePicker } from "antd"; 
+import { Input, InputNumber, Select, Switch, Button } from "antd";
 import { useServiceCategories } from "../hooks/useServiceCategories";
 import type { IService } from "../types/service";
-// THÊM MỚI: Import dayjs để xử lý định dạng ngày tháng cho DatePicker
-import dayjs from "dayjs"; 
+
+// 1. Định nghĩa chuẩn xác các trường có trong Form Dịch vụ (Không có created_at)
+export interface ServiceFormValues {
+    name: string;
+    category_id: number | undefined;
+    description: string;
+    price: number;
+    duration_minutes: number;
+    is_deposit_required: boolean;
+    deposit_percent: number;
+    status: string;
+}
 
 interface ServiceFormProps {
-    initialValues?: IService | null; // Bưu kiện dữ liệu cũ từ ServiceListPage truyền xuống khi Sửa
-    onSubmit: (values: any) => void;
+    initialValues?: IService | null;
+    onSubmit: (values: ServiceFormValues) => void;
     submitting?: boolean;
 }
 
 export default function ServiceForm({ initialValues, onSubmit, submitting }: ServiceFormProps) {
-    // Gọi API lấy danh sách danh mục để đổ vào thẻ chọn Select
     const { data: categories = [], isLoading: isLoadingCategories } = useServiceCategories();
 
-    // 1. Khởi tạo cấu trúc form bằng React Hook Form
-    const { control, handleSubmit, reset, watch } = useForm({
+    // 2. Ép kiểu Form bằng ServiceFormValues
+    const { control, handleSubmit, reset, watch } = useForm<ServiceFormValues>({
         defaultValues: {
             name: "",
             category_id: undefined,
@@ -28,24 +36,23 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
             is_deposit_required: false,
             deposit_percent: 0,
             status: "ACTIVE",
-            created_at: "", // THÊM MỚI: Khai báo trường ngày tạo trong form dịch vụ
         },
     });
 
-    // 2. CƠ CHẾ HOẠT ĐỘNG CỦA initialValues QUA useEffect
+    // 3. Xử lý đồng bộ dữ liệu cũ (Sửa) hoặc làm sạch Form (Thêm mới)
     useEffect(() => {
         if (initialValues) {
-            // ==================== CHẾ ĐỘ SỬA ====================
-            // Nếu có dữ liệu cũ gửi xuống -> bóc bưu kiện và gọi reset() đổ đầy vào các ô nhập
             reset({
-                ...initialValues,
-                category_id: initialValues.category_id || undefined,
-                // Chuyển đổi dữ liệu ngày từ API (ISO String) thành chuỗi đơn giản YYYY-MM-DD
-                created_at: initialValues.created_at ? dayjs(initialValues.created_at).format("YYYY-MM-DD") : "",
+                name: initialValues.name,
+                category_id: initialValues.category_id,
+                description: initialValues.description || "",
+                price: initialValues.price,
+                duration_minutes: initialValues.duration_minutes,
+                is_deposit_required: initialValues.is_deposit_required,
+                deposit_percent: initialValues.deposit_percent || 0,
+                status: initialValues.status || "ACTIVE",
             });
         } else {
-            // ==================== CHẾ ĐỘ THÊM MỚI ====================
-            // Nếu initialValues trống -> reset form về trạng thái ban đầu và lấy ngày hôm nay làm mặc định
             reset({
                 name: "",
                 category_id: undefined,
@@ -55,12 +62,10 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 is_deposit_required: false,
                 deposit_percent: 0,
                 status: "ACTIVE",
-                created_at: dayjs().format("YYYY-MM-DD"), // Mặc định là ngày hôm nay
             });
         }
-    }, [initialValues, reset]); // Lắng nghe bưu kiện initialValues, cứ thay đổi là useEffect tự chạy để làm mới form
+    }, [initialValues, reset]);
 
-    // Theo dõi trạng thái Switch để ẩn/hiện ô nhập phần trăm cọc tiền
     const isDepositRequired = watch("is_deposit_required");
 
     return (
@@ -84,7 +89,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                     />
                 </div>
 
-                {/* Danh mục dịch vụ */}
+                {/* Danh mục thuộc về */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         <span className="text-red-500 mr-1">*</span>Danh mục thuộc về
@@ -150,27 +155,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 </div>
             </div>
 
-            {/* ==================== TRƯỜNG THÊM MỚI: Ô CHỌN NGÀY THÁNG ==================== */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày áp dụng/Ngày tạo</label>
-                <Controller
-                    name="created_at"
-                    control={control}
-                    render={({ field }) => (
-                        <DatePicker
-                            className="w-full h-10 rounded-md"
-                            placeholder="Chọn ngày áp dụng"
-                            // Chuyển chuỗi YYYY-MM-DD từ react-hook-form thành object dayjs để DatePicker hiển thị
-                            value={field.value ? dayjs(field.value) : null}
-                            // Khi chọn ngày mới, format ngược lại thành chuỗi YYYY-MM-DD gửi vào form state
-                            onChange={(date) => field.onChange(date ? date.format("YYYY-MM-DD") : "")}
-                            format="DD/MM/YYYY" // Giao diện hiển thị thân thiện: Ngày/Tháng/Năm
-                        />
-                    )}
-                />
-            </div>
-
-            {/* Trạng thái yêu cầu đặt cọc */}
+            {/* Switch đặt cọc */}
             <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <Controller
                     name="is_deposit_required"
@@ -182,7 +167,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 <span className="text-sm font-medium text-gray-700">Yêu cầu khách hàng thanh toán đặt cọc trước trực tuyến</span>
             </div>
 
-            {/* Hiện ô nhập phần trăm nếu kích hoạt Switch đặt cọc */}
+            {/* Khung phần trăm cọc (Chỉ hiện khi Switch bật) */}
             {isDepositRequired && (
                 <div className="transition-all duration-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phần trăm tiền cọc cần trả trước (%)</label>
@@ -196,7 +181,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 </div>
             )}
 
-            {/* Mô tả dịch vụ */}
+            {/* Mô tả */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn về dịch vụ</label>
                 <Controller
@@ -208,7 +193,6 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 />
             </div>
 
-            {/* Chân Form chứa nút bấm */}
             <div className="flex justify-end pt-4 border-t border-gray-100 mt-2">
                 <Button type="primary" htmlType="submit" loading={submitting} className="h-10 px-6 font-medium rounded-md">
                     {initialValues ? "Lưu thay đổi" : "Tạo dịch vụ mới"}
