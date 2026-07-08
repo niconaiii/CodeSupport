@@ -11,13 +11,13 @@ export const createService = async (data: Omit<IService, "id">) => {
     return res.data;
 };
 
-//thêm
-
+// ==================== THÊM MỚI ====================
 export const updateService = async (id: number, data: Partial<IService>) => {
     const res = await axiosClient.patch(`/services/${id}`, data);
     return res.data;
 };
 
+// ==================== THÊM MỚI ====================
 export const deleteService = async (id: number) => {
     const res = await axiosClient.delete(`/services/${id}`);
     return res.data;
