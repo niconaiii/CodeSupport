@@ -1,21 +1,23 @@
-// THÊM MỚI TOÀN BỘ FILE HOÀN CHỈNH BẰNG REACT HOOK FORM & TAILWIND CSS
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { Input, InputNumber, Select, Switch, Button } from "antd";
+// CẬP NHẬT: Import thêm DatePicker từ Ant Design
+import { Input, InputNumber, Select, Switch, Button, DatePicker } from "antd"; 
 import { useServiceCategories } from "../hooks/useServiceCategories";
 import type { IService } from "../types/service";
+// THÊM MỚI: Import dayjs để xử lý định dạng ngày tháng cho DatePicker
+import dayjs from "dayjs"; 
 
 interface ServiceFormProps {
-    initialValues?: IService | null; // Nhận thông tin dịch vụ cũ nếu là chế độ Sửa
+    initialValues?: IService | null; // Bưu kiện dữ liệu cũ từ ServiceListPage truyền xuống khi Sửa
     onSubmit: (values: any) => void;
     submitting?: boolean;
 }
 
 export default function ServiceForm({ initialValues, onSubmit, submitting }: ServiceFormProps) {
-    // Gọi API lấy danh sách danh mục đổ vào thẻ chọn Select ô danh mục
+    // Gọi API lấy danh sách danh mục để đổ vào thẻ chọn Select
     const { data: categories = [], isLoading: isLoadingCategories } = useServiceCategories();
 
-    // Khởi tạo trạng thái form và các điều kiện bắt buộc bằng React Hook Form
+    // 1. Khởi tạo cấu trúc form bằng React Hook Form
     const { control, handleSubmit, reset, watch } = useForm({
         defaultValues: {
             name: "",
@@ -26,14 +28,24 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
             is_deposit_required: false,
             deposit_percent: 0,
             status: "ACTIVE",
+            created_at: "", // THÊM MỚI: Khai báo trường ngày tạo trong form dịch vụ
         },
     });
 
-    // Lắng nghe biến initialValues: Nếu có dữ liệu cũ -> reset form và đổ data vào. Nếu không -> làm trống form
+    // 2. CƠ CHẾ HOẠT ĐỘNG CỦA initialValues QUA useEffect
     useEffect(() => {
         if (initialValues) {
-            reset(initialValues);
+            // ==================== CHẾ ĐỘ SỬA ====================
+            // Nếu có dữ liệu cũ gửi xuống -> bóc bưu kiện và gọi reset() đổ đầy vào các ô nhập
+            reset({
+                ...initialValues,
+                category_id: initialValues.category_id || undefined,
+                // Chuyển đổi dữ liệu ngày từ API (ISO String) thành chuỗi đơn giản YYYY-MM-DD
+                created_at: initialValues.created_at ? dayjs(initialValues.created_at).format("YYYY-MM-DD") : "",
+            });
         } else {
+            // ==================== CHẾ ĐỘ THÊM MỚI ====================
+            // Nếu initialValues trống -> reset form về trạng thái ban đầu và lấy ngày hôm nay làm mặc định
             reset({
                 name: "",
                 category_id: undefined,
@@ -43,17 +55,18 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                 is_deposit_required: false,
                 deposit_percent: 0,
                 status: "ACTIVE",
+                created_at: dayjs().format("YYYY-MM-DD"), // Mặc định là ngày hôm nay
             });
         }
-    }, [initialValues, reset]);
+    }, [initialValues, reset]); // Lắng nghe bưu kiện initialValues, cứ thay đổi là useEffect tự chạy để làm mới form
 
-    // Theo dõi trạng thái của Switch cọc tiền để ẩn/hiện ô nhập phần trăm tương ứng
+    // Theo dõi trạng thái Switch để ẩn/hiện ô nhập phần trăm cọc tiền
     const isDepositRequired = watch("is_deposit_required");
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Trường: Tên dịch vụ */}
+                {/* Tên dịch vụ */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         <span className="text-red-500 mr-1">*</span>Tên dịch vụ
@@ -64,14 +77,14 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                         rules={{ required: "Vui lòng nhập tên dịch vụ" }}
                         render={({ field, fieldState }) => (
                             <>
-                                <Input {...field} placeholder="VD: Cắt tạo kiểu Undercut" status={fieldState.error ? "error" : ""} className="h-10" />
+                                <Input {...field} placeholder="VD: Cắt tạo kiểu Undercut" status={fieldState.error ? "error" : ""} className="h-10 rounded-md" />
                                 {fieldState.error && <span className="text-red-500 text-xs mt-1 block">{fieldState.error.message}</span>}
                             </>
                         )}
                     />
                 </div>
 
-                {/* Trường: Danh mục dịch vụ */}
+                {/* Danh mục dịch vụ */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         <span className="text-red-500 mr-1">*</span>Danh mục thuộc về
@@ -98,7 +111,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                {/* Trường: Giá dịch vụ */}
+                {/* Giá dịch vụ */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         <span className="text-red-500 mr-1">*</span>Giá dịch vụ (VNĐ)
@@ -111,7 +124,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                             <>
                                 <InputNumber 
                                     {...field} 
-                                    className="w-full h-10 flex items-center" 
+                                    className="w-full h-10 flex items-center rounded-md" 
                                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} 
                                     status={fieldState.error ? "error" : ""} 
                                 />
@@ -121,7 +134,7 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                     />
                 </div>
 
-                {/* Trường: Thời gian thực hiện */}
+                {/* Thời gian thực hiện */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         <span className="text-red-500 mr-1">*</span>Thời gian thực hiện (Phút)
@@ -131,14 +144,34 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
                         control={control}
                         rules={{ required: "Vui lòng nhập số phút thực hiện" }}
                         render={({ field }) => (
-                            <InputNumber {...field} min={5} step={5} className="w-full h-10 flex items-center" />
+                            <InputNumber {...field} min={5} step={5} className="w-full h-10 flex items-center rounded-md" />
                         )}
                     />
                 </div>
             </div>
 
+            {/* ==================== TRƯỜNG THÊM MỚI: Ô CHỌN NGÀY THÁNG ==================== */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày áp dụng/Ngày tạo</label>
+                <Controller
+                    name="created_at"
+                    control={control}
+                    render={({ field }) => (
+                        <DatePicker
+                            className="w-full h-10 rounded-md"
+                            placeholder="Chọn ngày áp dụng"
+                            // Chuyển chuỗi YYYY-MM-DD từ react-hook-form thành object dayjs để DatePicker hiển thị
+                            value={field.value ? dayjs(field.value) : null}
+                            // Khi chọn ngày mới, format ngược lại thành chuỗi YYYY-MM-DD gửi vào form state
+                            onChange={(date) => field.onChange(date ? date.format("YYYY-MM-DD") : "")}
+                            format="DD/MM/YYYY" // Giao diện hiển thị thân thiện: Ngày/Tháng/Năm
+                        />
+                    )}
+                />
+            </div>
+
             {/* Trạng thái yêu cầu đặt cọc */}
-            <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100 transition-all">
+            <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <Controller
                     name="is_deposit_required"
                     control={control}
@@ -151,31 +184,31 @@ export default function ServiceForm({ initialValues, onSubmit, submitting }: Ser
 
             {/* Hiện ô nhập phần trăm nếu kích hoạt Switch đặt cọc */}
             {isDepositRequired && (
-                <div className="animate-fadeIn">
+                <div className="transition-all duration-200">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phần trăm tiền cọc cần trả trước (%)</label>
                     <Controller
                         name="deposit_percent"
                         control={control}
                         render={({ field }) => (
-                            <InputNumber {...field} min={1} max={100} className="w-full h-10 flex items-center" placeholder="Nhập từ 1 đến 100" />
+                            <InputNumber {...field} min={1} max={100} className="w-full h-10 flex items-center rounded-md" placeholder="Nhập từ 1 đến 100" />
                         )}
                     />
                 </div>
             )}
 
-            {/* Trường: Mô tả dịch vụ */}
+            {/* Mô tả dịch vụ */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn về dịch vụ</label>
                 <Controller
                     name="description"
                     control={control}
                     render={({ field }) => (
-                        <Input.TextArea {...field} rows={3} placeholder="Mô tả các bước thực hiện hoặc quà tặng đi kèm nếu có..." className="rounded-lg" />
+                        <Input.TextArea {...field} rows={3} placeholder="Mô tả các bước thực hiện..." className="rounded-lg" />
                     )}
                 />
             </div>
 
-            {/* Khu vực nút bấm xác nhận ở chân Form */}
+            {/* Chân Form chứa nút bấm */}
             <div className="flex justify-end pt-4 border-t border-gray-100 mt-2">
                 <Button type="primary" htmlType="submit" loading={submitting} className="h-10 px-6 font-medium rounded-md">
                     {initialValues ? "Lưu thay đổi" : "Tạo dịch vụ mới"}
