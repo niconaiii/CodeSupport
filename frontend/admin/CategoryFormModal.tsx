@@ -1,24 +1,24 @@
 import { useEffect } from "react";
-import { Modal, Input, Button, DatePicker } from "antd"; // CẬP NHẬT: Thêm DatePicker từ Ant Design
+import { Modal, Input, Button, DatePicker } from "antd";
 import { useForm, Controller } from "react-hook-form";
 import type { IServiceCategory } from "../../../types/service";
-import dayjs from "dayjs"; // THÊM MỚI: Dùng để format và hiển thị ngày tháng cho AntD DatePicker
+import dayjs from "dayjs";
 
-// ==================== THÊM MỚI ĐOẠN NÀY ====================
+// ==================== THÊM MỚI: Định nghĩa kiểu dữ liệu an toàn cho Form ====================
 export interface CategoryFormValues {
     name: string;
     description?: string;
     created_at?: string;
 }
-// ============================================================
+// ===========================================================================================
 
 interface CategoryFormModalProps {
     open: boolean;
     mode: "create" | "edit";
-    initialValues?: IServiceCategory | null; // Nơi nhận bưu kiện dữ liệu từ trang cha gửi xuống
+    initialValues?: IServiceCategory | null;
     submitting: boolean;
     onCancel: () => void;
-    onSubmit: (values: any) => void;
+    onSubmit: (values: CategoryFormValues) => void; // CẬP NHẬT: Đổi từ kiểu 'any' sang strict type 'CategoryFormValues'
 }
 
 export default function CategoryFormModal({
@@ -30,41 +30,39 @@ export default function CategoryFormModal({
     onSubmit,
 }: CategoryFormModalProps) {
     
-    // 1. Khởi tạo cấu trúc dữ liệu mặc định của form bằng React Hook Form
-    const { control, handleSubmit, reset } = useForm({
+    // CẬP NHẬT: Ép kiểu dữ liệu strict cho hook useForm bằng <CategoryFormValues>
+    const { control, handleSubmit, reset } = useForm<CategoryFormValues>({
         defaultValues: {
             name: "",
             description: "",
-            created_at: "", // THÊM MỚI: Khai báo trường dữ liệu ngày tạo trong Form
+            created_at: "", 
         },
     });
 
-    // 2. MINH HỌA DÒNG CHẠY CỦA initialValues QUA useEffect
+    // CẬP NHẬT: Viết lại logic kiểm soát luồng đóng/mở và bóc tách bưu kiện initialValues dữ liệu cũ
     useEffect(() => {
-        if (open) { // Chỉ xử lý khi Modal được mở ra
+        if (open) {
             if (initialValues) {
-                // ==================== CHẾ ĐỘ SỬA ====================
-                // Nếu bưu kiện initialValues có dữ liệu cũ -> Tiến hành dùng reset() để đổ ngược vào form
+                // Chế độ: SỬA DỮ LIỆU
                 reset({
                     name: initialValues.name || "",
                     description: initialValues.description || "",
-                    // Đảm bảo dữ liệu ngày tháng từ API trả về được đưa vào đúng trường dưới dạng String (YYYY-MM-DD)
+                    // CẬP NHẬT: Chuyển đổi định dạng chuỗi thời gian trả về từ API sang chuỗi YYYY-MM-DD
                     created_at: initialValues.created_at ? dayjs(initialValues.created_at).format("YYYY-MM-DD") : "",
                 });
             } else {
-                // ==================== CHẾ ĐỘ THÊM MỚI ====================
-                // Nếu initialValues trống rỗng -> Tiến hành reset form về trạng thái trống hoàn toàn
+                // Chế độ: THÊM MỚI
                 reset({
                     name: "",
                     description: "",
-                    created_at: dayjs().format("YYYY-MM-DD"), // THÊM MỚI: Khi thêm mới, mặc định chọn sẵn ngày hôm nay cho tiện lợi
+                    created_at: dayjs().format("YYYY-MM-DD"), // THÊM MỚI: Mặc định chọn ngày hiện tại khi mở form tạo mới
                 });
             }
         }
-    }, [initialValues, open, reset]); // Mỗi khi bưu kiện thay đổi hoặc đóng/mở modal, useEffect này sẽ lập tức chạy lại
+    }, [initialValues, open, reset]);
 
-    const handleFormSubmit = (data: any) => {
-        onSubmit(data); // Đẩy dữ liệu sạch đã qua kiểm duyệt lên trang cha để gọi API
+    const handleFormSubmit = (data: CategoryFormValues) => {
+        onSubmit(data);
     };
 
     return (
@@ -95,7 +93,7 @@ export default function CategoryFormModal({
                     />
                 </div>
 
-                {/* Trường nhập: Mô tả */}
+                {/* Trường nhập: Mô tả danh mục */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả chi tiết</label>
                     <Controller
@@ -107,7 +105,7 @@ export default function CategoryFormModal({
                     />
                 </div>
 
-                {/* ==================== TRƯỜNG THÊM MỚI: Ô CHỌN NGÀY THÁNG ==================== */}
+                {/* ==================== THÊM MỚI: Tích hợp ô chọn ngày tháng bằng DatePicker ==================== */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ngày tạo danh mục</label>
                     <Controller
@@ -117,18 +115,15 @@ export default function CategoryFormModal({
                             <DatePicker
                                 className="w-full h-10 rounded-md"
                                 placeholder="Chọn ngày tháng"
-                                // Vì Ant Design DatePicker bắt buộc nhận giá trị là 1 object dayjs chứ không nhận chuỗi String, 
-                                // nên ta dùng dayjs(field.value) để chuyển đổi chuỗi từ React Hook Form thành dạng hiển thị cho DatePicker
                                 value={field.value ? dayjs(field.value) : null}
-                                // Khi người dùng chọn ngày mới, ta format ngày đó thành chuỗi chuẩn "YYYY-MM-DD" để lưu ngược vào React Hook Form
                                 onChange={(date) => field.onChange(date ? date.format("YYYY-MM-DD") : "")}
-                                format="DD/MM/YYYY" // Định dạng hiển thị cho người dùng xem trên giao diện là Ngày/Tháng/Năm
+                                format="DD/MM/YYYY"
                             />
                         )}
                     />
                 </div>
+                {/* ============================================================================================= */}
 
-                {/* Vùng chứa các nút thao tác */}
                 <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 mt-2">
                     <Button onClick={onCancel} className="h-10 px-4 rounded-md">
                         Hủy bỏ
