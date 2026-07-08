@@ -4,6 +4,14 @@ import { useForm, Controller } from "react-hook-form";
 import type { IServiceCategory } from "../../../types/service";
 import dayjs from "dayjs"; // THÊM MỚI: Dùng để format và hiển thị ngày tháng cho AntD DatePicker
 
+// ==================== THÊM MỚI ĐOẠN NÀY ====================
+export interface CategoryFormValues {
+    name: string;
+    description?: string;
+    created_at?: string;
+}
+// ============================================================
+
 interface CategoryFormModalProps {
     open: boolean;
     mode: "create" | "edit";
